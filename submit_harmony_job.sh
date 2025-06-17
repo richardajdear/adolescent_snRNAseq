@@ -22,6 +22,6 @@ echo "Starting Harmony Integration job using Singularity container: $SINGULARITY
 srun singularity exec \
     "$SINGULARITY_IMAGE" \
     bash -c "export PYTHONPATH=\$PYTHONPATH:$(pwd)/snRNAseq/code && \
-             /opt/micromamba/envs/shortcake_default/bin/python snRNAseq/code/run_integration.py"
+             /opt/micromamba/envs/shortcake_default/bin/python snRNAseq/code/run_harmony.py"
 
 echo "Harmony Integration job finished."

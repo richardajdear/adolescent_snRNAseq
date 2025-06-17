@@ -4,6 +4,7 @@ import numpy as np
 import os
 import warnings
 import anndata as ad
+from typing import Optional
 
 def plot_integration_umaps(
     adata: ad.AnnData,
@@ -13,8 +14,10 @@ def plot_integration_umaps(
     output_filename_prefix: str,
     figure_size_inches: tuple[int, int],
     age_log2_plot_settings: dict,
-    plot_title_suffix: str = "",
-    add_suptitle: bool = False, # New parameter: default to False (no suptitle)
+    plot_title_suffix: str = "", # e.g., "scVI" or "scANVI"
+    use_highly_variable_genes_param: Optional[bool] = None, # Made optional
+    max_epochs_scvi_param: Optional[int] = None, # Made optional
+    max_epochs_scanvi_param: Optional[int] = None, # Already optional
 ):
     """
     Generates and saves UMAP plots for a specified UMAP embedding (e.g., 'X_umap_scvi').
@@ -34,8 +37,12 @@ def plot_integration_umaps(
         age_log2_plot_settings: Dictionary containing settings for 'age_log2' colorbar.
         plot_title_suffix: Additional text to append to the plot's main title (e.g., "scVI").
                            This is used for both subplot titles and the main suptitle.
-        add_suptitle: If True, a main suptitle will be added to the figure.
-                      Defaults to False.
+        use_highly_variable_genes_param: Boolean indicating if highly variable genes were used.
+                                         If None, it will not be added to the suptitle.
+        max_epochs_scvi_param: Maximum epochs for scVI training.
+                               If None, it will not be added to the suptitle.
+        max_epochs_scanvi_param: Maximum epochs for scANVI training (only relevant for scANVI plots).
+                                 If None, it will not be added to the suptitle.
     """
     if not plot_color_keys:
         print(f"  No valid plot_color_keys to plot for {umap_key_to_plot}. Skipping plotting.")
@@ -73,7 +80,7 @@ def plot_integration_umaps(
         try:
             # Plot using the temporary X_umap
             sc.pl.umap(adata, color=key, show=False, ax=ax, color_map=cmap)
-            ax.set_title(f"{plot_title_suffix} UMAP - {key}".strip()) # .strip() to clean up leading space if suffix is empty
+            ax.set_title(key) # Removed suffix, just the color label
         except Exception as e:
             warnings.warn(f"Failed to plot UMAP for '{key}' on '{umap_key_to_plot}': {e}. Skipping this subplot.")
             ax.set_visible(False) # Hide the subplot if plotting fails
@@ -93,15 +100,14 @@ def plot_integration_umaps(
                     age_ax_index = idx
                     break
 
-            if age_ax_index != -1 and age_ax_index < len(axes) and axes[age_ax_index].get_title().endswith('age_log2'):
+            if age_ax_index != -1 and age_ax_index < len(axes):
                 # Heuristically find the colorbar for the specific subplot
                 cbar_ax = None
-                for a_fig in fig.axes: # Iterate through all axes in the figure
+                for a_fig in fig.axes:
                     if hasattr(a_fig, 'get_ylabel') and 'age_log2' in a_fig.get_ylabel():
                          cbar_ax = a_fig
                          break
-                # Fallback: find any colorbar if the above fails
-                if cbar_ax is None:
+                if cbar_ax is None: # Fallback if direct label search fails
                     for a_fig in fig.axes:
                         if hasattr(a_fig, 'get_label') and 'colorbar' in a_fig.get_label():
                             cbar_ax = a_fig
@@ -120,12 +126,25 @@ def plot_integration_umaps(
         except Exception as e:
             warnings.warn(f"Failed to set custom 'age_log2' ticks: {e}. Continuing without custom ticks.")
 
-    # Only add suptitle if add_suptitle is True
-    if add_suptitle:
-        plt.tight_layout(rect=[0, 0.03, 1, 0.98]) # Adjust layout for suptitle
-        plt.suptitle(f"{plot_title_suffix} Integrated UMAPs".strip(), y=1.0, fontsize=16)
-    else:
-        plt.tight_layout() # Use standard tight_layout if no suptitle
+    plt.tight_layout(rect=[0, 0.03, 1, 0.98]) # Adjust layout for suptitle
+
+    # Construct the suptitle dynamically, conditionally adding "––" and using ", " for subsequent params
+    base_title = f"{plot_title_suffix} Integrated UMAP"
+    suptitle_param_parts = []
+    if use_highly_variable_genes_param is not None:
+        suptitle_param_parts.append(f"use_highly_variable_genes: {use_highly_variable_genes_param}")
+    if max_epochs_scvi_param is not None:
+        suptitle_param_parts.append(f"max_epochs_scvi: {max_epochs_scvi_param}")
+    if plot_title_suffix == "scANVI" and max_epochs_scanvi_param is not None:
+        suptitle_param_parts.append(f"max_epochs_scanvi: {max_epochs_scanvi_param}")
+    
+    if suptitle_param_parts: # If there are any optional parameters to add
+        # Join parameters with ", " and then prepend with " –– "
+        suptitle_text = base_title + " –– " + ", ".join(suptitle_param_parts)
+    else: # If no optional parameters are provided
+        suptitle_text = base_title
+    
+    plt.suptitle(suptitle_text, y=1.0, fontsize=16) # Always add suptitle with detailed info
 
     plot_output_path = os.path.join(output_dir, f"{output_filename_prefix}.png")
     plt.savefig(plot_output_path, dpi=300, bbox_inches='tight')
@@ -139,3 +158,4 @@ def plot_integration_umaps(
     elif 'X_umap' in adata.obsm: # If it was created by us but no original existed
         del adata.obsm['X_umap'] # Clean up the temporary X_umap if no original existed
         print(f"  Cleaned up temporary adata.obsm['X_umap'].")
+

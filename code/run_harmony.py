@@ -367,7 +367,7 @@ if __name__ == "__main__":
 
     # Output settings
     output_base_dir = "snRNAseq/outputs" # A top-level directory for your results
-    run_name = "velmeshev-wang_pcs15" # A unique name for this specific run
+    run_name = "velmeshev-wang_pcs20" # A unique name for this specific run
     output_specific_dir = os.path.join(output_base_dir, run_name)
     output_h5ad_filename = f"{run_name}.h5ad"
 
@@ -383,7 +383,7 @@ if __name__ == "__main__":
             output_dir=output_specific_dir,
             output_filename=output_h5ad_filename,
             n_top_genes=3000,
-            n_comps=15,
+            n_comps=20,
             max_iter_harmony=50, # Maximum iterations for Harmony integration
             n_neighbors=30,
             min_dist_umap=0.3,

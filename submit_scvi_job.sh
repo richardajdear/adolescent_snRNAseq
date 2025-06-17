@@ -1,16 +1,16 @@
 #!/bin/bash
 #SBATCH -A VERTES-SL2-GPU               # Your GPU account
 #SBATCH -p ampere                       # Target Ampere GPU partition (e.g., volta-gpu, turing-gpu, ampere)
-#SBATCH -J scvi_integrate               # Job name for scVI
+#SBATCH -J scanvi                       # Job name for scVI
 #SBATCH --nodes=1                       # Request 1 node
-#SBATCH --gres=gpu:4                    
-#SBATCH --time=12:00:00                 # Set a maximum run time (HH:MM:SS) - adjust if actual run takes longer
+#SBATCH --gres=gpu:2                    
+#SBATCH --time=00:30:00                 # Set a maximum run time (HH:MM:SS) - adjust if actual run takes longer
 #SBATCH --output=scvi_job_%j.out        # Standard output and error log (%j expands to jobID)
 #SBATCH --error=scvi_job_%j.err         # Standard error log
 
 # Set name for the run, which defines where to find the harmony dataset 
-# RUN_NAME="velmeshev100k-wang50k_pcs20"
-RUN_NAME="velmeshev-wang_pcs20"
+RUN_NAME="velmeshev100k-wang50k_pcs20"
+# RUN_NAME="velmeshev-wang_pcs20"
 
 # --- Singularity Container Configuration ---
 SINGULARITY_IMAGE="shortcake_scvi.sif" # !! IMPORTANT: Ensure this path is correct relative to job submission !!
@@ -45,12 +45,15 @@ singularity exec --nv "$SINGULARITY_IMAGE" \
 echo -e "\n--- Running scVI/scANVI Integration Script ---"
 
 # Execute the main Python script
-# Make sure 'snRNAseq/code/run_scVI.py' is the correct path to your script
-# and 'velmeshev100k-wang50k_pcs20' is the correct harmony_run_name argument.
+# Make sure 'snRNAseq/code/run_scvi.py' is the correct path to your script
 singularity exec --nv \
     "$SINGULARITY_IMAGE" \
     micromamba run -n scvi-scgen-scmomat-unitvelo \
-    python snRNAseq/code/run_scVI.py $RUN_NAME
+    python snRNAseq/code/run_scvi.py $RUN_NAME \
+    --num_gpus_for_scanvi_training 1 \
+    --run_inference
+
+# --overwrite_scanvi_model \
 
 EXIT_CODE=$?
 
